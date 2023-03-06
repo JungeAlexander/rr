@@ -17,6 +17,7 @@ sacremoses = "^0.0.53"
 llvmlite = "^0.39.1"
 bokeh = "^3.0.3"
 umap-learn = "^0.5.3"
+scikit-learn = "^1.2.1"
 
 
 [tool.poetry.group.dev.dependencies]
