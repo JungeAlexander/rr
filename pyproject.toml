@@ -15,15 +15,17 @@ torchaudio = "0.12.1"
 transformers = "^4.26.1"
 sacremoses = "^0.0.53"
 llvmlite = "^0.39.1"
-bokeh = "^3.0.3"
 umap-learn = "^0.5.3"
 scikit-learn = "^1.2.1"
 streamlit = "^1.19.0"
+bokeh = "2.4.3"
 
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.21.2"
 pre-commit = "^3.1.0"
+black = "^23.1.0"
+watchdog = "^2.3.1"
 
 [build-system]
 requires = ["poetry-core"]
