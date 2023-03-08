@@ -18,7 +18,7 @@ num_papers = st.number_input("Number of papers", min_value=1, max_value=100, val
 query_term = st.text_input("Text query", "distant supervision biomedical text mining")
 n = st.number_input("Number of recommendations", min_value=1, max_value=100, value=5)
 
-# TODO check below that these exist in relevant paperIDs
+# TODO actually select these from initial list of papers
 liked_ids = [
     "0824e6f75e18325a79b11e3e4a118409e3297f97",
     "d0c5f901868f6e2cb126fd51b155f631372a9669",
@@ -173,28 +173,37 @@ loss = attractor_d.min(axis=1) - detractor_d.min(axis=1)
 keep_query_id_idx = loss.argsort()[:n]
 keep_query_ids = [
     new_query_ids[i] for i in keep_query_id_idx
-]  # TODO separatae plot against new_query_id_df
+]
+
+vis_df = pd.concat([id_info_df, new_query_id_df])
+vis_df = vis_df.drop_duplicates(subset="id_")
+vis_df.reset_index(drop=True, inplace=True)
 
 id_types = []
-for i in id_info_df.loc[:, "id_"]:
-    if i in liked_ids:
+for i in vis_df.loc[:, "id_"]:
+    if i == paper_id:
+        id_types.append("query")
+    elif i in liked_ids:
         id_types.append("liked")
     elif i in disliked_ids:
         id_types.append("disliked")
-    elif i == paper_id:
-        id_types.append("query")
     elif i in keep_query_ids:
         id_types.append("recommend")
     else:
         id_types.append("value")
-id_info_df.insert(0, "type", id_types)
+vis_df.insert(0, "type", id_types)
 
-
-ids = id_info_df.loc[:, "id_"].tolist()
-embeddings = [id_to_vector[i] for i in ids]
+ids = vis_df.loc[:, "id_"].tolist()
+embeddings = []
+for i in ids:
+    if i in id_to_vector:
+        embeddings.append(id_to_vector[i])
+    elif i in new_query_id_to_vector:
+        embeddings.append(new_query_id_to_vector[i])
 embed_df = pd.DataFrame(embeddings, index=ids)
 embed_df_t = embed_umap(embed_df)
 embed_df_t["id_"] = ids
-df_t = embed_df_t.merge(id_info_df, on="id_", validate="one_to_one")
+df_t = embed_df_t.merge(vis_df, on="id_", validate="one_to_one")
 
 st.bokeh_chart(bokeh_vis(df_t), use_container_width=True)
+st.dataframe(vis_df)
