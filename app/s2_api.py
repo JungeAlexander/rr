@@ -13,7 +13,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.title("S2 API")
 
-# TODO turn into input
 doi = st.text_input("DOI", "10.1101/444398")
 num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=30)
 query_term = st.text_input("Text query", "distant supervision biomedical text mining")
@@ -89,8 +88,44 @@ def embed_matrix(ids, id_to_vector, embed_dim):
     )
 
 
+def embed_umap(in_df):
+    reducer = umap.UMAP(random_state=42)
+    reducer.fit(in_df)
+    out_df = pd.DataFrame(reducer.transform(in_df))
+    out_df.columns = ["x", "y"]
+    return out_df
+
+
 def d(a, m):
     return 1 - cosine_similarity(a, m)
+
+
+def bokeh_vis(in_df):
+    datasource = ColumnDataSource({str(c): v.values for c, v in in_df.items()})
+    tooltips = [
+        ("(x,y)", "($x, $y)"),
+        ("id", "@id_"),
+        ("title", "@title"),
+    ]
+    plot_figure = figure(
+        title="UMAP projection of papers",
+        width=800,
+        height=800,
+        tooltips=tooltips,
+    )
+    color_map = CategoricalColorMapper(
+        palette=["black", "orange", "blue", "red", "grey"],
+        factors=["query", "liked", "disliked", "recommend", "value"],
+    )
+    plot_figure.circle(
+        "x",
+        "y",
+        source=datasource,
+        size=20,
+        color={"field": "type", "transform": color_map},
+        alpha=0.5,
+    )
+    return plot_figure
 
 
 r1 = httpx.get(
@@ -136,7 +171,9 @@ detractor_d = d(new_query_ids_mat, detractor_ids_mat)
 loss = attractor_d.min(axis=1) - detractor_d.min(axis=1)
 
 keep_query_id_idx = loss.argsort()[:n]
-keep_query_ids = [new_query_ids[i] for i in keep_query_id_idx] # TODO separatae plot against new_query_id_df
+keep_query_ids = [
+    new_query_ids[i] for i in keep_query_id_idx
+]  # TODO separatae plot against new_query_id_df
 
 id_types = []
 for i in id_info_df.loc[:, "id_"]:
@@ -152,38 +189,12 @@ for i in id_info_df.loc[:, "id_"]:
         id_types.append("value")
 id_info_df.insert(0, "type", id_types)
 
-reducer = umap.UMAP(random_state=42)
+
 ids = id_info_df.loc[:, "id_"].tolist()
 embeddings = [id_to_vector[i] for i in ids]
 embed_df = pd.DataFrame(embeddings, index=ids)
-reducer.fit(embed_df)
-embed_df_t = pd.DataFrame(reducer.transform(embed_df))
-embed_df_t.columns = ["x", "y"]
+embed_df_t = embed_umap(embed_df)
 embed_df_t["id_"] = ids
-
 df_t = embed_df_t.merge(id_info_df, on="id_", validate="one_to_one")
-datasource = ColumnDataSource({str(c): v.values for c, v in df_t.items()})
-tooltips = [
-    ("(x,y)", "($x, $y)"),
-    ("id", "@id_"),
-    ("title", "@title"),
-]
-plot_figure = figure(
-    title="UMAP projection of papers",
-    width=800,
-    height=800,
-    tooltips=tooltips,
-)
-color_map = CategoricalColorMapper(
-    palette=["black", "orange", "blue", "red", "grey"],
-    factors=["query", "liked", "disliked", "recommend", "value"],
-)
-plot_figure.circle(
-    "x",
-    "y",
-    source=datasource,
-    size=20,
-    color={"field": "type", "transform": color_map},
-    alpha=0.5,
-)
-st.bokeh_chart(plot_figure, use_container_width=True)
+
+st.bokeh_chart(bokeh_vis(df_t), use_container_width=True)
