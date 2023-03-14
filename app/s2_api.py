@@ -14,9 +14,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 st.title("S2 API")
 
 doi = st.text_input("DOI", "10.1101/444398")
-num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=30)
+num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=10)
 query_term = st.text_input("Text query", "distant supervision biomedical text mining")
 n = st.number_input("Number of recommendations", min_value=1, max_value=100, value=5)
+go = st.button("GO")
 
 # TODO actually select these from initial list of papers
 liked_ids = [
@@ -46,7 +47,17 @@ def get_paper_batch_info(ids):
         json=payload,
         timeout=50.0,
     )
-    return r.json()
+    j = r.json()
+    try:
+        r.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        st.experimental_show(payload)
+        st.experimental_show(j)
+        print(
+            f"Error response {exc.response.status_code} while requesting {exc.request.url!r}."
+        )
+        raise exc
+    return j
 
 
 def print_paper_info(paper_ids, paper_info_df):
@@ -66,18 +77,30 @@ def parse_paper_batch_info(json_response):
         tldr = p["tldr"]["text"] if p["tldr"] is not None else ""
         id_info.append(
             [
-                id_,
+                False,
+                False,
                 p["title"],
                 p["year"],
                 p["venue"],
                 p["abstract"],
                 tldr,
                 [a["name"] for a in p["authors"]],
+                id_,
             ]
         )
     id_info_df = pd.DataFrame(
         id_info,
-        columns=["id_", "title", "year", "venue", "abstract", "tldr", "authors"],
+        columns=[
+            "like",
+            "dislike",
+            "title",
+            "year",
+            "venue",
+            "abstract",
+            "tldr",
+            "authors",
+            "id_",
+        ],
     )
     return id_info_df, id_to_vector
 
@@ -143,6 +166,14 @@ ids = [p["paperId"] for p in j2["recommendedPapers"]] + [paper_id]
 j3 = get_paper_batch_info(ids)
 id_info_df, id_to_vector = parse_paper_batch_info(j3)
 
+if not go:
+    st.stop()
+
+
+id_info_df_selected = st.experimental_data_editor(id_info_df)
+# liked_ids = id_info_df_selected.loc[id_info_df_selected.loc[:, "like"], "id_"].values
+# disliked_ids = id_info_df_selected.loc[id_info_df_selected.loc[:, "dislike"], "id_"].values
+
 attractor_ids = liked_ids + [paper_id]
 detractor_ids = disliked_ids.copy()
 assert all((i in id_to_vector for i in attractor_ids))
@@ -171,9 +202,7 @@ detractor_d = d(new_query_ids_mat, detractor_ids_mat)
 loss = attractor_d.min(axis=1) - detractor_d.min(axis=1)
 
 keep_query_id_idx = loss.argsort()[:n]
-keep_query_ids = [
-    new_query_ids[i] for i in keep_query_id_idx
-]
+keep_query_ids = [new_query_ids[i] for i in keep_query_id_idx]
 
 vis_df = pd.concat([id_info_df, new_query_id_df])
 vis_df = vis_df.drop_duplicates(subset="id_")
