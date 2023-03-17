@@ -17,20 +17,19 @@ doi = st.text_input("DOI", "10.1101/444398")
 num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=10)
 query_term = st.text_input("Text query", "distant supervision biomedical text mining")
 n = st.number_input("Number of recommendations", min_value=1, max_value=100, value=5)
-go = st.button("GO")
 
 # TODO actually select these from initial list of papers
-liked_ids = [
-    "0824e6f75e18325a79b11e3e4a118409e3297f97",
-    "d0c5f901868f6e2cb126fd51b155f631372a9669",
-]
-disliked_ids = [
-    "13d51ef5fbf4447bd9d58283387f1610a4fcfce4",
-    "b6407952a59dd1664e44e3a6336f91e8599aa30f",
-    "b9c8fed348084c5b31722f5433ea805299d006aa",
-    "48de1a31cca6631bd73a5d0854acfda5e5195d66",
-    "0e908cfd65ebd60c690e2aabcb9e0d67bdcbfb81",
-]
+# liked_ids = [
+#     "0824e6f75e18325a79b11e3e4a118409e3297f97",
+#     "d0c5f901868f6e2cb126fd51b155f631372a9669",
+# ]
+# disliked_ids = [
+#     "13d51ef5fbf4447bd9d58283387f1610a4fcfce4",
+#     "b6407952a59dd1664e44e3a6336f91e8599aa30f",
+#     "b9c8fed348084c5b31722f5433ea805299d006aa",
+#     "48de1a31cca6631bd73a5d0854acfda5e5195d66",
+#     "0e908cfd65ebd60c690e2aabcb9e0d67bdcbfb81",
+# ]
 
 
 def print_paper(paper: dict):
@@ -105,6 +104,14 @@ def parse_paper_batch_info(json_response):
     return id_info_df, id_to_vector
 
 
+def assert_ids_in_vector(id_to_vector, ids):
+    for i in ids:
+        if i not in id_to_vector:
+            st.experimental_show(ids)
+            st.experimental_show(id_to_vector.keys())
+            raise ValueError(f"{i} not in id_to_vector")
+
+
 def embed_matrix(ids, id_to_vector, embed_dim):
     return np.fromiter(
         (id_to_vector[i] for i in ids), dtype=np.dtype((float, embed_dim))
@@ -166,18 +173,23 @@ ids = [p["paperId"] for p in j2["recommendedPapers"]] + [paper_id]
 j3 = get_paper_batch_info(ids)
 id_info_df, id_to_vector = parse_paper_batch_info(j3)
 
+
+id_info_df_selected = st.experimental_data_editor(id_info_df)
+liked_ids = id_info_df_selected.loc[id_info_df_selected["like"]
+, "id_"].values
+disliked_ids = id_info_df_selected.loc[
+    id_info_df_selected["dislike"], "id_"
+].values
+
+go = st.button("GO")
 if not go:
     st.stop()
 
+attractor_ids = list(liked_ids) + [paper_id]
+detractor_ids = list(disliked_ids)
 
-id_info_df_selected = st.experimental_data_editor(id_info_df)
-# liked_ids = id_info_df_selected.loc[id_info_df_selected.loc[:, "like"], "id_"].values
-# disliked_ids = id_info_df_selected.loc[id_info_df_selected.loc[:, "dislike"], "id_"].values
-
-attractor_ids = liked_ids + [paper_id]
-detractor_ids = disliked_ids.copy()
-assert all((i in id_to_vector for i in attractor_ids))
-assert all((i in id_to_vector for i in detractor_ids))
+assert_ids_in_vector(id_to_vector, attractor_ids)
+assert_ids_in_vector(id_to_vector, detractor_ids)
 
 embed_dim = 768
 attractor_ids_mat = embed_matrix(attractor_ids, id_to_vector, embed_dim)
