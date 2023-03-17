@@ -11,12 +11,11 @@ from bokeh.plotting import figure, output_notebook, show
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-st.title("S2 API")
+st.title("S2 API Search")
 
 doi = st.text_input("DOI", "10.1101/444398")
 num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=10)
-query_term = st.text_input("Text query", "distant supervision biomedical text mining")
-n = st.number_input("Number of recommendations", min_value=1, max_value=100, value=5)
+
 
 # TODO actually select these from initial list of papers
 # liked_ids = [
@@ -181,6 +180,9 @@ disliked_ids = id_info_df_selected.loc[
     id_info_df_selected["dislike"], "id_"
 ].values
 
+st.header("Recommendations :sparkles: :sparkles: :sparkles:")
+query_term = st.text_input("Text query", "distant supervision biomedical text mining")
+n = st.number_input("Number of recommendations", min_value=1, max_value=100, value=5)
 go = st.button("GO")
 if not go:
     st.stop()
