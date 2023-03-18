@@ -174,11 +174,8 @@ id_info_df, id_to_vector = parse_paper_batch_info(j3)
 
 
 id_info_df_selected = st.experimental_data_editor(id_info_df)
-liked_ids = id_info_df_selected.loc[id_info_df_selected["like"]
-, "id_"].values
-disliked_ids = id_info_df_selected.loc[
-    id_info_df_selected["dislike"], "id_"
-].values
+liked_ids = id_info_df_selected.loc[id_info_df_selected["like"], "id_"].values
+disliked_ids = id_info_df_selected.loc[id_info_df_selected["dislike"], "id_"].values
 
 st.header("Recommendations :sparkles: :sparkles: :sparkles:")
 query_term = st.text_input("Text query", "distant supervision biomedical text mining")
@@ -215,8 +212,18 @@ attractor_d = d(new_query_ids_mat, attractor_ids_mat)
 detractor_d = d(new_query_ids_mat, detractor_ids_mat)
 loss = attractor_d.min(axis=1) - detractor_d.min(axis=1)
 
-keep_query_id_idx = loss.argsort()[:n]
-keep_query_ids = [new_query_ids[i] for i in keep_query_id_idx]
+keep_query_id_idx = loss.argsort()
+keep_query_ids = []
+for i in keep_query_id_idx:
+    new_id = new_query_ids[i]
+    if (
+        (new_id != paper_id)
+        and (new_id not in liked_ids)
+        and (new_id not in disliked_ids)
+    ):
+        keep_query_ids.append(new_id)
+    if len(keep_query_ids) >= n:
+        break
 
 vis_df = pd.concat([id_info_df, new_query_id_df])
 vis_df = vis_df.drop_duplicates(subset="id_")
