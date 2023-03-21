@@ -1,4 +1,3 @@
-import bokeh
 import httpx
 import numpy as np
 import pandas as pd
@@ -13,7 +12,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.title("S2 API Search")
 
-doi = st.text_input("DOI", "10.1101/444398")
+#doi = "10.1101/444398"
+#text_query = "distant supervision biomedical text mining"
+
+doi = "10.1016/j.mce.2018.04.002"
+text_query = "gip glp1 obesity diabetes"
+
+doi = st.text_input("DOI", doi) 
 num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=10)
 
 
@@ -178,7 +183,7 @@ liked_ids = id_info_df_selected.loc[id_info_df_selected["like"], "id_"].values
 disliked_ids = id_info_df_selected.loc[id_info_df_selected["dislike"], "id_"].values
 
 st.header("Recommendations :sparkles: :sparkles: :sparkles:")
-query_term = st.text_input("Text query", "distant supervision biomedical text mining")
+query_term = st.text_input("Text query", text_query)
 n = st.number_input("Number of recommendations", min_value=1, max_value=100, value=5)
 go = st.button("GO")
 if not go:
@@ -197,7 +202,8 @@ assert attractor_ids_mat.shape == (len(attractor_ids), embed_dim)
 assert detractor_ids_mat.shape == (len(detractor_ids), embed_dim)
 
 r4 = httpx.get(
-    f"https://api.semanticscholar.org/graph/v1/paper/search?query={query_term}&fields=title,url,abstract,authors&limit=50"
+    f"https://api.semanticscholar.org/graph/v1/paper/search?query={query_term}&fields=title,url,abstract,authors&limit=50",
+    timeout=50.0,
 )
 j4 = r4.json()
 
