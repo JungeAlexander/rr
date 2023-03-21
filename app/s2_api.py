@@ -2,6 +2,7 @@ import httpx
 import numpy as np
 import pandas as pd
 import streamlit as st
+import tenacity
 import umap
 
 from bokeh.models import CategoricalColorMapper, ColumnDataSource, HoverTool
@@ -12,13 +13,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.title("S2 API Search")
 
-#doi = "10.1101/444398"
-#text_query = "distant supervision biomedical text mining"
+# doi = "10.1101/444398"
+# text_query = "distant supervision biomedical text mining"
 
 doi = "10.1016/j.mce.2018.04.002"
 text_query = "gip glp1 obesity diabetes"
 
-doi = st.text_input("DOI", doi) 
+doi = st.text_input("DOI", doi)
 num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=10)
 
 
@@ -43,24 +44,37 @@ def print_paper(paper: dict):
     print(paper["authors"])
 
 
-def get_paper_batch_info(ids):
-    payload = {"ids": ids}
-    r = httpx.post(
-        "https://api.semanticscholar.org/graph/v1/paper/batch?fields=title,abstract,authors,year,venue,embedding,tldr",
-        json=payload,
-        timeout=50.0,
-    )
+@tenacity.retry(
+    wait=tenacity.wait.wait_exponential(multiplier=1, min=4, max=10),
+    stop=tenacity.stop_after_attempt(3),
+    retry=tenacity.retry_if_exception_type(httpx.HTTPError),
+)
+def make_request(url, type, json=None, timeout=50.0):
+    if type == "get":
+        r = httpx.get(url, timeout=timeout)
+    elif type == "post":
+        r = httpx.post(url, json=json, timeout=timeout)
     j = r.json()
     try:
         r.raise_for_status()
-    except httpx.HTTPStatusError as exc:
-        st.experimental_show(payload)
+    except httpx.HTTPError as exc:
+        st.experimental_show(json)
         st.experimental_show(j)
         print(
             f"Error response {exc.response.status_code} while requesting {exc.request.url!r}."
         )
         raise exc
     return j
+
+
+def get_paper_batch_info(ids):
+    payload = {"ids": ids}
+    return make_request(
+        url="https://api.semanticscholar.org/graph/v1/paper/batch?fields=title,abstract,authors,year,venue,embedding,tldr",
+        type="post",
+        json=payload,
+        timeout=50.0,
+    )
 
 
 def print_paper_info(paper_ids, paper_info_df):
@@ -162,17 +176,16 @@ def bokeh_vis(in_df):
     return plot_figure
 
 
-r1 = httpx.get(
-    f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}?fields=title,url,abstract,authors"
+j1 = make_request(
+    url=f"https://api.semanticscholar.org/graph/v1/paper/DOI:{doi}?fields=title,url,abstract,authors",
+    type="get",
 )
-j1 = r1.json()
 paper_id = j1["paperId"]
 
-r2 = httpx.get(
-    f"https://api.semanticscholar.org/recommendations/v1/papers/forpaper/{paper_id}?limit={num_papers}&fields=title,url,abstract,authors"
+j2 = make_request(
+    url=f"https://api.semanticscholar.org/recommendations/v1/papers/forpaper/{paper_id}?limit={num_papers}&fields=title,url,abstract,authors",
+    type="get",
 )
-j2 = r2.json()
-
 ids = [p["paperId"] for p in j2["recommendedPapers"]] + [paper_id]
 j3 = get_paper_batch_info(ids)
 id_info_df, id_to_vector = parse_paper_batch_info(j3)
@@ -201,11 +214,10 @@ detractor_ids_mat = embed_matrix(detractor_ids, id_to_vector, embed_dim)
 assert attractor_ids_mat.shape == (len(attractor_ids), embed_dim)
 assert detractor_ids_mat.shape == (len(detractor_ids), embed_dim)
 
-r4 = httpx.get(
-    f"https://api.semanticscholar.org/graph/v1/paper/search?query={query_term}&fields=title,url,abstract,authors&limit=50",
-    timeout=50.0,
+j4 = make_request(
+    url=f"https://api.semanticscholar.org/graph/v1/paper/search?query={query_term}&fields=title,url,abstract,authors&limit=50",
+    type="get",
 )
-j4 = r4.json()
 
 new_query_ids = [p["paperId"] for p in j4["data"]]
 j5 = get_paper_batch_info(new_query_ids)
