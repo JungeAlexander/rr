@@ -11,13 +11,13 @@ from bokeh.plotting import figure, output_notebook, show
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-st.title("S2 API Search")
+st.title("Paper recommender")
 
-# doi = "10.1101/444398"
-# text_query = "distant supervision biomedical text mining"
+doi = "10.1101/444398"
+text_query = "distant supervision biomedical text mining"
 
-doi = "10.1016/j.mce.2018.04.002"
-text_query = "gip glp1 obesity diabetes"
+# doi = "10.1016/j.mce.2018.04.002"
+# text_query = "gip glp1 obesity diabetes"
 
 doi = st.text_input("DOI", doi)
 num_papers = st.number_input("Number of papers", min_value=1, max_value=100, value=10)
