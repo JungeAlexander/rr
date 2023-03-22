@@ -13,6 +13,48 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 st.title("Paper recommender")
 
+with st.expander("What is this? :thinking_face: "):
+    st.markdown(
+        "A simple content-based recommender system for papers with the following steps: "
+    )
+    st.markdown("### 1. Search for a paper on Semantic Scholar.")
+    st.markdown(
+        "The search is based on the paper's DOI and uses the [Semantic Scholar API](https://api.semanticscholar.org/)."
+    )
+    st.markdown("### 2. Select a number of papers to use as a starting point.")
+    st.markdown(
+        "The papers are selected based by  Semantic Scholar to be similar to the input DOI."
+    )
+    st.markdown("### 3. Select papers you like and dislike.")
+    st.markdown("The papers you like and dislike are used to define recommentations.")
+    st.markdown("### 4. Get recommendations based on the papers you liked and disliked.")
+    st.markdown(
+        "Here we query semantic scholar for a text query and return the top N recommended papers according to the following heuristic:"
+    )
+    st.markdown(
+        "1. For each candidate paper, we calculate the cosine distance between the paper's [Specter](https://huggingface.co/allenai/specter) embedding and the embeddings of the liked and disliked papers."
+    )
+    st.markdown(
+        "2. Sort papers in increasing order by score $\mathcal{S}$ (loosely inspired by triplet loss):"
+    )
+    st.markdown(
+        "$\mathcal{S}(x, L, D) = \\text{min}_{l \in L} \  d(x, l) \ - \ \\text{min}_{d \in D} \ d(x, d)$"
+    )
+    st.markdown(
+        "   where $x$ is the query paper, $L$ the set of liked papers, $D$ the set of disliked papers, $d$ is the cosine distance between two embeddings. I.e. we look for papers that are similar to the liked papers but dissimilar to the disliked papers."
+    )
+    st.markdown(
+        "### 5. Repeat steps 3 and 4 until you are satisfied with the recommendations."
+    )
+    st.markdown(
+        "An interactive 2D visualization of the papers (using UMAP) is shown to select papers of interest."
+    )
+    st.markdown("### Improvements to be made: ")
+    st.markdown("- use [Specter2.0](https://huggingface.co/allenai/specter2)")
+    st.markdown("- different filtering heuristics")
+    st.markdown("- much more")
+
+
 doi = "10.1101/444398"
 text_query = "distant supervision biomedical text mining"
 
