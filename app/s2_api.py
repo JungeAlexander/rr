@@ -205,7 +205,7 @@ def bokeh_vis(in_df):
     )
     color_map = CategoricalColorMapper(
         palette=["black", "orange", "blue", "red", "grey"],
-        factors=["query", "liked", "disliked", "recommend", "value"],
+        factors=["query", "liked", "disliked", "recommended", "other"],
     )
     plot_figure.circle(
         "x",
@@ -214,6 +214,7 @@ def bokeh_vis(in_df):
         size=20,
         color={"field": "type", "transform": color_map},
         alpha=0.5,
+        legend_group="type"
     )
     return plot_figure
 
@@ -257,7 +258,7 @@ assert attractor_ids_mat.shape == (len(attractor_ids), embed_dim)
 assert detractor_ids_mat.shape == (len(detractor_ids), embed_dim)
 
 j4 = make_request(
-    url=f"https://api.semanticscholar.org/graph/v1/paper/search?query={query_term}&fields=title,url,abstract,authors&limit=50",
+    url=f"https://api.semanticscholar.org/graph/v1/paper/search?query={query_term}&fields=title,url,abstract,authors&limit=30",
     type="get",
 )
 
@@ -298,9 +299,9 @@ for i in vis_df.loc[:, "id_"]:
     elif i in disliked_ids:
         id_types.append("disliked")
     elif i in keep_query_ids:
-        id_types.append("recommend")
+        id_types.append("recommended")
     else:
-        id_types.append("value")
+        id_types.append("other")
 vis_df.insert(0, "type", id_types)
 
 ids = vis_df.loc[:, "id_"].tolist()
