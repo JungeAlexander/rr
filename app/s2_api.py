@@ -319,4 +319,5 @@ embed_df_t["id_"] = ids
 df_t = embed_df_t.merge(vis_df, on="id_", validate="one_to_one")
 
 st.bokeh_chart(bokeh_vis(df_t), use_container_width=True)
+st.markdown("### All papers:")
 st.dataframe(vis_df)
