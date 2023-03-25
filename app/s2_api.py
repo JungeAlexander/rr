@@ -126,7 +126,7 @@ def print_paper_info(paper_ids, paper_info_df):
         print()
 
 
-def parse_paper_batch_info(json_response):
+def parse_paper_batch_info(json_response, query_paper_id):
     id_to_vector = {}
     id_info = []
     for p in json_response:
@@ -161,6 +161,8 @@ def parse_paper_batch_info(json_response):
             "id_",
         ],
     )
+    # always like the query paper
+    id_info_df.loc[id_info_df.loc[:, "id_"] == query_paper_id, "like"] = True
     return id_info_df, id_to_vector
 
 
@@ -231,7 +233,7 @@ j2 = make_request(
 )
 ids = [p["paperId"] for p in j2["recommendedPapers"]] + [paper_id]
 j3 = get_paper_batch_info(ids)
-id_info_df, id_to_vector = parse_paper_batch_info(j3)
+id_info_df, id_to_vector = parse_paper_batch_info(j3, paper_id)
 
 
 id_info_df_selected = st.experimental_data_editor(id_info_df)
@@ -264,7 +266,7 @@ j4 = make_request(
 
 new_query_ids = [p["paperId"] for p in j4["data"]]
 j5 = get_paper_batch_info(new_query_ids)
-new_query_id_df, new_query_id_to_vector = parse_paper_batch_info(j5)
+new_query_id_df, new_query_id_to_vector = parse_paper_batch_info(j5, paper_id)
 
 new_query_ids_mat = embed_matrix(new_query_ids, new_query_id_to_vector, embed_dim)
 assert new_query_ids_mat.shape == (len(new_query_ids), embed_dim)
