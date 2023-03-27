@@ -209,8 +209,20 @@ go = st.button("GO")
 if not go:
     st.stop()
 
-attractor_ids = list(liked_ids) + [paper_id]
+attractor_ids = list(liked_ids)
 detractor_ids = list(disliked_ids)
+
+if not attractor_ids:
+    st.warning("No liked papers - try liking at least one paper.")
+    st.stop()
+
+if not detractor_ids:
+    st.warning("No disliked papers - try disliking at least one paper.")
+    st.stop()
+
+if set(attractor_ids).intersection(detractor_ids):
+    st.warning("Make sure to either like or dislike each paper.")
+    st.stop()
 
 assert_ids_in_vector(id_to_vector, attractor_ids)
 assert_ids_in_vector(id_to_vector, detractor_ids)
